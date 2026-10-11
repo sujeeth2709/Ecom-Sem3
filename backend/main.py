@@ -23,6 +23,8 @@ app.add_middleware(
 
 DB_NAME = "ecommerce.db"
 
+EARBUDS_IMAGE = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZjRmNWY3Ii8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZDVkYWUzIi8+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImNzIiB4MT0iMCIgeTE9IjAiIHgyPSIwIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZmZmZmZmIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZTNlNmVjIi8+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImViIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZmZmZmZmIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjY2ZkNGRlIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9InVybCgjYmcpIi8+PGVsbGlwc2UgY3g9IjIwMCIgY3k9IjMzOCIgcng9IjEyMCIgcnk9IjE0IiBmaWxsPSIjMDAwIiBvcGFjaXR5PSIuMTIiLz48cmVjdCB4PSI5NSIgeT0iMjE1IiB3aWR0aD0iMjEwIiBoZWlnaHQ9IjExNSIgcng9IjQyIiBmaWxsPSJ1cmwoI2NzKSIgc3Ryb2tlPSIjYzNjOWQ1IiBzdHJva2Utd2lkdGg9IjIiLz48cGF0aCBkPSJNOTcgMjYyIEgzMDMiIHN0cm9rZT0iI2MzYzlkNSIgc3Ryb2tlLXdpZHRoPSIyIi8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMjkyIiByPSI1IiBmaWxsPSIjZjVhNjIzIi8+PGcgZmlsbD0idXJsKCNlYikiIHN0cm9rZT0iI2I5YzBjZCIgc3Ryb2tlLXdpZHRoPSIyIj48ZyB0cmFuc2Zvcm09InJvdGF0ZSgtMTQgMTQ4IDE1MCkiPjxlbGxpcHNlIGN4PSIxNDgiIGN5PSIxMTgiIHJ4PSIzNCIgcnk9IjM4Ii8+PHJlY3QgeD0iMTM0IiB5PSIxMzIiIHdpZHRoPSIyNiIgaGVpZ2h0PSI4MiIgcng9IjEzIi8+PC9nPjxnIHRyYW5zZm9ybT0icm90YXRlKDE0IDI1MiAxNTApIj48ZWxsaXBzZSBjeD0iMjUyIiBjeT0iMTE4IiByeD0iMzQiIHJ5PSIzOCIvPjxyZWN0IHg9IjI0MCIgeT0iMTMyIiB3aWR0aD0iMjYiIGhlaWdodD0iODIiIHJ4PSIxMyIvPjwvZz48L2c+PGcgZmlsbD0iIzJiMmYzYSIgb3BhY2l0eT0iLjg1Ij48Y2lyY2xlIGN4PSIxMzYiIGN5PSIxMjAiIHI9IjEyIiB0cmFuc2Zvcm09InJvdGF0ZSgtMTQgMTQ4IDE1MCkiLz48Y2lyY2xlIGN4PSIyNjQiIGN5PSIxMjAiIHI9IjEyIiB0cmFuc2Zvcm09InJvdGF0ZSgxNCAyNTIgMTUwKSIvPjwvZz48L3N2Zz4K"
+
 def get_db():
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
@@ -80,7 +82,7 @@ def init_db():
     cursor.execute("SELECT COUNT(*) FROM products")
     if cursor.fetchone()[0] == 0:
         seed_products = [
-            ("Wireless Earbuds", "Electronics", 1999, 34, "https://images.unsplash.com/photo-1572569432755-e9aa2febb35f?w=400&q=80"),
+            ("Wireless Earbuds", "Electronics", 1999, 34, EARBUDS_IMAGE),
             ("Smart Watch", "Electronics", 3499, 12, "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400&q=80"),
             ("Cotton T-Shirt", "Fashion", 499, 80, "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&q=80"),
             ("Running Shoes", "Fashion", 2299, 0, "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80"),
@@ -90,6 +92,10 @@ def init_db():
             ("Novel: The Silent Patient", "Books", 349, 22, "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=400&q=80")
         ]
         cursor.executemany("INSERT INTO products (name, category, price, stock, image) VALUES (?, ?, ?, ?, ?)", seed_products)
+
+    # Replace the broken Wireless Earbuds picture in existing databases
+    cursor.execute("UPDATE products SET image = ? WHERE name = 'Wireless Earbuds' AND image LIKE '%photo-1572569432755%'",
+                   (EARBUDS_IMAGE,))
 
     conn.commit()
     conn.close()
@@ -114,6 +120,7 @@ class ProductCreate(BaseModel):
     category: str
     price: float
     stock: int
+    image: Optional[str] = None
 
 class ProductUpdate(BaseModel):
     price: float
@@ -185,8 +192,9 @@ def create_product(data: ProductCreate):
     conn = get_db()
     cursor = conn.cursor()
     placeholder_image = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80"
+    image = data.image if data.image and data.image.startswith("data:image/") and len(data.image) < 2_000_000 else placeholder_image
     cursor.execute("INSERT INTO products (name, category, price, stock, image) VALUES (?, ?, ?, ?, ?)",
-                   (data.name.strip(), data.category, data.price, data.stock, placeholder_image))
+                   (data.name.strip(), data.category, data.price, data.stock, image))
     conn.commit()
     conn.close()
     return {"message": "Product successfully added."}

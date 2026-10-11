@@ -46,6 +46,23 @@ function updateCartPill() {
 function initAuthPage() {
     const loginForm = document.getElementById("login-form");
     const regForm = document.getElementById("register-form");
+    const tabLogin = document.getElementById("tab-login");
+    const tabRegister = document.getElementById("tab-register");
+
+    if (tabLogin && tabRegister && loginForm && regForm) {
+        tabLogin.onclick = () => {
+            loginForm.style.display = "";
+            regForm.style.display = "none";
+            tabLogin.classList.add("active");
+            tabRegister.classList.remove("active");
+        };
+        tabRegister.onclick = () => {
+            regForm.style.display = "";
+            loginForm.style.display = "none";
+            tabRegister.classList.add("active");
+            tabLogin.classList.remove("active");
+        };
+    }
 
     if (loginForm) {
         loginForm.onsubmit = async (e) => {
@@ -235,6 +252,8 @@ async function initAdminPage() {
     if (addProductForm) {
         addProductForm.onsubmit = async (e) => {
             e.preventDefault();
+            const imageFile = document.getElementById("np-image").files[0];
+            const image = imageFile ? await imageToDataUrl(imageFile) : null;
             const res = await fetch(`${API_BASE_URL}/admin/products`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -242,7 +261,8 @@ async function initAdminPage() {
                     name: document.getElementById("np-name").value,
                     category: document.getElementById("np-cat").value,
                     price: Number(document.getElementById("np-price").value),
-                    stock: Number(document.getElementById("np-stock").value)
+                    stock: Number(document.getElementById("np-stock").value),
+                    image: image
                 })
             });
 
@@ -256,6 +276,28 @@ async function initAdminPage() {
             }
         };
     }
+}
+
+// Reads a picked image file and shrinks it (max 400px) so it can be stored with the product
+function imageToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error("Could not read image"));
+        reader.onload = () => {
+            const img = new Image();
+            img.onerror = () => reject(new Error("Invalid image file"));
+            img.onload = () => {
+                const scale = Math.min(1, 400 / Math.max(img.width, img.height));
+                const canvas = document.createElement("canvas");
+                canvas.width = Math.round(img.width * scale);
+                canvas.height = Math.round(img.height * scale);
+                canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL("image/jpeg", 0.85));
+            };
+            img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+    });
 }
 
 async function updateProduct(id) {

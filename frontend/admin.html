@@ -34,7 +34,7 @@
 
     <div class="section-title"><h3>Add new product</h3></div>
     <div class="card">
-      <form id="add-product-form" class="grid" style="grid-template-columns:2fr 1fr 1fr 1fr auto;align-items:end;gap:12px;">
+      <form id="add-product-form" class="grid" style="grid-template-columns:2fr 1fr 1fr 1fr 1.5fr auto;align-items:end;gap:12px;">
         <div><label>Name</label><input id="np-name" required></div>
         <div><label>Category</label>
           <select id="np-cat">
@@ -44,6 +44,7 @@
         </div>
         <div><label>Price (₹)</label><input id="np-price" type="number" min="1" required></div>
         <div><label>Stock</label><input id="np-stock" type="number" min="0" required></div>
+        <div><label>Picture</label><input id="np-image" type="file" accept="image/*"></div>
         <button class="btn">Add</button>
       </form>
     </div>
