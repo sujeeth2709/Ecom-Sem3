@@ -1,4 +1,5 @@
 const API_BASE_URL = "/api";
+let allProducts = []; // Store products globally for the search bar
 
 /* ---------------- Session & UI Helpers ---------------- */
 
@@ -34,7 +35,24 @@ function toast(msg) {
 
 // Client Cart Buffer Functions
 function getCart() { return JSON.parse(localStorage.getItem("cart") || "[]"); }
-function saveCart(c) { localStorage.setItem("cart", JSON.stringify(c)); updateCartPill(); }
+
+function saveCart(c) { 
+    localStorage.setItem("cart", JSON.stringify(c)); 
+    updateCartPill(); 
+
+    const user = currentUser();
+    if (user && user.role === "customer") {
+        fetch(`${API_BASE_URL}/cart/sync`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                userId: user.id,
+                items: c.map(i => ({ productId: i.productId, qty: i.qty }))
+            })
+        }).catch(err => console.error("Failed to sync cart to database:", err));
+    }
+}
+
 function updateCartPill() {
     const count = getCart().reduce((sum, item) => sum + item.qty, 0);
     const pill = document.getElementById("cart-count");
@@ -112,21 +130,41 @@ function initAuthPage() {
     }
 }
 
-/* ---------------- 2. Shop Page API Calls ---------------- */
+/* ---------------- 2. Shop Page API Calls (Updated for Search) ---------------- */
 
 async function initShopPage() {
     const user = requireLogin("customer");
     if (!user) return;
     document.getElementById("who").textContent = user.name;
 
+    // Fetch all products once
     const res = await fetch(`${API_BASE_URL}/products`);
-    const products = await res.json();
+    allProducts = await res.json();
 
+    // Attach search event listener
+    const searchBar = document.getElementById("search-bar");
+    if (searchBar) {
+        searchBar.addEventListener("input", (e) => {
+            renderProducts(e.target.value);
+        });
+    }
+
+    // Initial render
+    renderProducts("");
+}
+
+// Function to filter and render products
+function renderProducts(searchQuery) {
     const wrap = document.getElementById("products");
     if (!wrap) return;
     wrap.innerHTML = "";
 
-    products.forEach((p) => {
+    // Filter products by name based on the search bar
+    const filtered = allProducts.filter(p => 
+        p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    filtered.forEach((p) => {
         const el = document.createElement("div");
         el.className = "product";
         el.innerHTML = `
@@ -142,7 +180,7 @@ async function initShopPage() {
             let line = cart.find((i) => i.productId === p.id);
             if (line) line.qty += 1;
             else cart.push({ productId: p.id, name: p.name, price: p.price, qty: 1 });
-            saveCart(cart);
+            saveCart(cart); // Syncs to DB automatically
             toast("Added to cart");
         };
         wrap.appendChild(el);
@@ -150,11 +188,23 @@ async function initShopPage() {
     updateCartPill();
 }
 
-/* ---------------- 3. Checkout Page API Calls ---------------- */
+/* ---------------- 3. Checkout Page API Calls (Updated for Delete) ---------------- */
+
+window.removeFromCart = function(productId) {
+    let cart = getCart();
+    // Filter out the deleted product
+    cart = cart.filter(item => item.productId !== productId);
+    saveCart(cart); // This automatically triggers the DB sync to delete it there too!
+    initCheckoutPage(); // Re-render the page
+    toast("Item removed");
+};
 
 async function initCheckoutPage() {
     const user = requireLogin("customer");
     if (!user) return;
+    document.getElementById("who").textContent = user.name;
+    
+    updateCartPill(); // Fixes the "0 in cart" display bug on page load
 
     const cart = getCart();
     const tbody = document.getElementById("cart-body");
@@ -164,7 +214,15 @@ async function initCheckoutPage() {
         tbody.innerHTML = "";
         cart.forEach((item) => {
             total += item.price * item.qty;
-            tbody.innerHTML += `<tr><td>${item.name}</td><td>₹${item.price}</td><td>${item.qty}</td><td>₹${item.price * item.qty}</td></tr>`;
+            // Injected the Remove Button in the final <td>
+            tbody.innerHTML += `
+            <tr>
+                <td>${item.name}</td>
+                <td>₹${item.price}</td>
+                <td>${item.qty}</td>
+                <td>₹${item.price * item.qty}</td>
+                <td><button class="btn danger small" onclick="removeFromCart(${item.productId})">Remove</button></td>
+            </tr>`;
         });
         document.getElementById("cart-total").textContent = "₹" + total;
     }
@@ -184,6 +242,11 @@ async function initCheckoutPage() {
     const orderBtn = document.getElementById("place-order");
     if (orderBtn) {
         orderBtn.onclick = async () => {
+            if (cart.length === 0) {
+                alert("Your cart is empty!");
+                return;
+            }
+            
             const res = await fetch(`${API_BASE_URL}/orders`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -195,7 +258,7 @@ async function initCheckoutPage() {
 
             if (res.ok) {
                 toast("Order Placed Successfully!");
-                saveCart([]);
+                saveCart([]); // Clears cart in LocalStorage & Database
                 window.location.href = "shop.html";
             } else {
                 const err = await res.json();
@@ -210,6 +273,7 @@ async function initCheckoutPage() {
 async function initAdminPage() {
     const user = requireLogin("admin");
     if (!user) return;
+    document.getElementById("who").textContent = user.name;
 
     // Fetch dashboard analytics computed by Python
     const res = await fetch(`${API_BASE_URL}/admin/dashboard`);
