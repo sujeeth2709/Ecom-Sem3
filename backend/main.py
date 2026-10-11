@@ -1,18 +1,17 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, EmailStr
-from typing import List, Optional
-import sqlite3
-from datetime import datetime
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from datetime import datetime
+import sqlite3
 import os
+
+# Import from your other files
+from database import init_db, get_db
+from models import UserRegister, UserLogin, ProductCreate, ProductUpdate, OrderCreate, OrderStatusUpdate, CartSync
 
 app = FastAPI(title="E-Commerce API")
 
-
-
-# Enable CORS for frontend client calls
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,125 +20,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DB_NAME = "ecommerce.db"
-
-EARBUDS_IMAGE = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZjRmNWY3Ii8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZDVkYWUzIi8+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImNzIiB4MT0iMCIgeTE9IjAiIHgyPSIwIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZmZmZmZmIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZTNlNmVjIi8+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImViIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZmZmZmZmIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjY2ZkNGRlIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9InVybCgjYmcpIi8+PGVsbGlwc2UgY3g9IjIwMCIgY3k9IjMzOCIgcng9IjEyMCIgcnk9IjE0IiBmaWxsPSIjMDAwIiBvcGFjaXR5PSIuMTIiLz48cmVjdCB4PSI5NSIgeT0iMjE1IiB3aWR0aD0iMjEwIiBoZWlnaHQ9IjExNSIgcng9IjQyIiBmaWxsPSJ1cmwoI2NzKSIgc3Ryb2tlPSIjYzNjOWQ1IiBzdHJva2Utd2lkdGg9IjIiLz48cGF0aCBkPSJNOTcgMjYyIEgzMDMiIHN0cm9rZT0iI2MzYzlkNSIgc3Ryb2tlLXdpZHRoPSIyIi8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMjkyIiByPSI1IiBmaWxsPSIjZjVhNjIzIi8+PGcgZmlsbD0idXJsKCNlYikiIHN0cm9rZT0iI2I5YzBjZCIgc3Ryb2tlLXdpZHRoPSIyIj48ZyB0cmFuc2Zvcm09InJvdGF0ZSgtMTQgMTQ4IDE1MCkiPjxlbGxpcHNlIGN4PSIxNDgiIGN5PSIxMTgiIHJ4PSIzNCIgcnk9IjM4Ii8+PHJlY3QgeD0iMTM0IiB5PSIxMzIiIHdpZHRoPSIyNiIgaGVpZ2h0PSI4MiIgcng9IjEzIi8+PC9nPjxnIHRyYW5zZm9ybT0icm90YXRlKDE0IDI1MiAxNTApIj48ZWxsaXBzZSBjeD0iMjUyIiBjeT0iMTE4IiByeD0iMzQiIHJ5PSIzOCIvPjxyZWN0IHg9IjI0MCIgeT0iMTMyIiB3aWR0aD0iMjYiIGhlaWdodD0iODIiIHJ4PSIxMyIvPjwvZz48L2c+PGcgZmlsbD0iIzJiMmYzYSIgb3BhY2l0eT0iLjg1Ij48Y2lyY2xlIGN4PSIxMzYiIGN5PSIxMjAiIHI9IjEyIiB0cmFuc2Zvcm09InJvdGF0ZSgtMTQgMTQ4IDE1MCkiLz48Y2lyY2xlIGN4PSIyNjQiIGN5PSIxMjAiIHI9IjEyIiB0cmFuc2Zvcm09InJvdGF0ZSgxNCAyNTIgMTUwKSIvPjwvZz48L3N2Zz4K"
-
-def get_db():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-# ---------------- Database Initialization ----------------
-
-def init_db():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # Users Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            role TEXT NOT NULL DEFAULT 'customer'
-        )
-    ''')
-
-    # Products Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS products (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            category TEXT NOT NULL,
-            price REAL NOT NULL,
-            stock INTEGER NOT NULL,
-            image TEXT
-        )
-    ''')
-
-    # Orders Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS orders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            total REAL NOT NULL,
-            status TEXT NOT NULL DEFAULT 'Paid',
-            date TEXT NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users (id)
-        )
-    ''')
-
-    # Seed Default Data if empty
-    cursor.execute("SELECT COUNT(*) FROM users")
-    if cursor.fetchone()[0] == 0:
-        cursor.execute("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
-                       ("Sujeeth S", "admin@store.com", "admin123", "admin"))
-        cursor.execute("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
-                       ("Test Customer", "customer@store.com", "pass123", "customer"))
-
-    cursor.execute("SELECT COUNT(*) FROM products")
-    if cursor.fetchone()[0] == 0:
-        seed_products = [
-            ("Wireless Earbuds", "Electronics", 1999, 34, EARBUDS_IMAGE),
-            ("Smart Watch", "Electronics", 3499, 12, "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400&q=80"),
-            ("Cotton T-Shirt", "Fashion", 499, 80, "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&q=80"),
-            ("Running Shoes", "Fashion", 2299, 0, "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80"),
-            ("Non-stick Pan", "Home & Kitchen", 899, 25, "https://images.unsplash.com/photo-1585032226651-759b368d7246?w=400&q=80"),
-            ("Table Lamp", "Home & Kitchen", 749, 18, "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=400&q=80"),
-            ("DBMS Textbook", "Books", 599, 40, "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400&q=80"),
-            ("Novel: The Silent Patient", "Books", 349, 22, "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=400&q=80")
-        ]
-        cursor.executemany("INSERT INTO products (name, category, price, stock, image) VALUES (?, ?, ?, ?, ?)", seed_products)
-
-    # Replace the broken Wireless Earbuds picture in existing databases
-    cursor.execute("UPDATE products SET image = ? WHERE name = 'Wireless Earbuds' AND image LIKE '%photo-1572569432755%'",
-                   (EARBUDS_IMAGE,))
-
-    conn.commit()
-    conn.close()
-
 @app.on_event("startup")
 def startup():
     init_db()
 
-# ---------------- Pydantic Request Schemas ----------------
-
-class UserRegister(BaseModel):
-    name: str
-    email: str
-    password: str
-
-class UserLogin(BaseModel):
-    email: str
-    password: str
-
-class ProductCreate(BaseModel):
-    name: str
-    category: str
-    price: float
-    stock: int
-    image: Optional[str] = None
-
-class ProductUpdate(BaseModel):
-    price: float
-    stock: int
-
-class CartItem(BaseModel):
-    productId: int
-    qty: int
-
-class OrderCreate(BaseModel):
-    userId: int
-    items: List[CartItem]
-
-class OrderStatusUpdate(BaseModel):
-    status: str
-
-# ---------------- API Endpoints (All Business Logic Lives Here) ----------------
-
-# 1. Authentication Logic
+# --- Auth Endpoints ---
 @app.post("/api/auth/register")
 def register_user(data: UserRegister):
     if len(data.password) < 6:
@@ -171,15 +56,22 @@ def login_user(data: UserLogin):
         raise HTTPException(status_code=400, detail="Invalid email or password.")
     return dict(user)
 
-# 2. Product Management Logic
+# --- Product Endpoints ---
 @app.get("/api/products")
 def fetch_products(category: str = "All"):
     conn = get_db()
     cursor = conn.cursor()
+    query = """
+        SELECT p.id, p.name, c.name as category, p.price, p.stock, p.image 
+        FROM products p
+        JOIN categories c ON p.category_id = c.id
+    """
     if category and category != "All":
-        cursor.execute("SELECT * FROM products WHERE category = ?", (category,))
+        query += " WHERE c.name = ?"
+        cursor.execute(query, (category,))
     else:
-        cursor.execute("SELECT * FROM products")
+        cursor.execute(query)
+    
     products = [dict(row) for row in cursor.fetchall()]
     conn.close()
     return products
@@ -191,10 +83,21 @@ def create_product(data: ProductCreate):
     
     conn = get_db()
     cursor = conn.cursor()
+    
+    # Lookup or create category ID
+    cursor.execute("SELECT id FROM categories WHERE name = ?", (data.category,))
+    cat = cursor.fetchone()
+    if not cat:
+        cursor.execute("INSERT INTO categories (name) VALUES (?)", (data.category,))
+        cat_id = cursor.lastrowid
+    else:
+        cat_id = cat["id"]
+
     placeholder_image = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80"
     image = data.image if data.image and data.image.startswith("data:image/") and len(data.image) < 2_000_000 else placeholder_image
-    cursor.execute("INSERT INTO products (name, category, price, stock, image) VALUES (?, ?, ?, ?, ?)",
-                   (data.name.strip(), data.category, data.price, data.stock, image))
+    
+    cursor.execute("INSERT INTO products (name, category_id, price, stock, image) VALUES (?, ?, ?, ?, ?)",
+                   (data.name.strip(), cat_id, data.price, data.stock, image))
     conn.commit()
     conn.close()
     return {"message": "Product successfully added."}
@@ -208,7 +111,20 @@ def modify_product(product_id: int, data: ProductUpdate):
     conn.close()
     return {"message": "Product successfully updated."}
 
-# 3. Order Processing Logic (Server-side validation & calculations)
+# --- Cart Endpoints ---
+@app.post("/api/cart/sync")
+def sync_cart(data: CartSync):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM cart_items WHERE user_id = ?", (data.userId,))
+    for item in data.items:
+        cursor.execute("INSERT INTO cart_items (user_id, product_id, quantity) VALUES (?, ?, ?)",
+                       (data.userId, item.productId, item.qty))
+    conn.commit()
+    conn.close()
+    return {"message": "Cart synced to database"}
+
+# --- Order Endpoints ---
 @app.post("/api/orders")
 def process_order(data: OrderCreate):
     if not data.items:
@@ -217,8 +133,8 @@ def process_order(data: OrderCreate):
     conn = get_db()
     cursor = conn.cursor()
     total_amount = 0.0
+    validated_items = []
 
-    # Validate stock & compute total dynamically on the server
     for item in data.items:
         cursor.execute("SELECT price, stock, name FROM products WHERE id = ?", (item.productId,))
         prod = cursor.fetchone()
@@ -230,14 +146,23 @@ def process_order(data: OrderCreate):
             raise HTTPException(status_code=400, detail=f"Insufficient stock for '{prod['name']}'.")
         
         total_amount += prod["price"] * item.qty
+        validated_items.append((item, prod["price"]))
 
-    # Record order and decrement database stock
     order_date = datetime.now().strftime("%Y-%m-%d")
+    
+    # 1. Insert Master Order
     cursor.execute("INSERT INTO orders (user_id, total, status, date) VALUES (?, ?, 'Paid', ?)",
                    (data.userId, total_amount, order_date))
+    order_id = cursor.lastrowid
     
-    for item in data.items:
+    # 2. Insert Order Items & Deduct Stock
+    for item, unit_price in validated_items:
+        cursor.execute("INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES (?, ?, ?, ?)",
+                       (order_id, item.productId, item.qty, unit_price))
         cursor.execute("UPDATE products SET stock = stock - ? WHERE id = ?", (item.qty, item.productId))
+
+    # 3. Clear database cart after successful order
+    cursor.execute("DELETE FROM cart_items WHERE user_id = ?", (data.userId,))
 
     conn.commit()
     conn.close()
@@ -252,13 +177,17 @@ def fetch_user_orders(user_id: int):
     conn.close()
     return orders
 
-# 4. Admin Analytics Logic (Computed entirely on the server)
+# --- Admin Dashboard ---
 @app.get("/api/admin/dashboard")
 def get_admin_dashboard():
     conn = get_db()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT * FROM products")
+    cursor.execute("""
+        SELECT p.id, p.name, c.name as category, p.price, p.stock, p.image 
+        FROM products p
+        JOIN categories c ON p.category_id = c.id
+    """)
     products = [dict(row) for row in cursor.fetchall()]
     
     cursor.execute("""
@@ -290,14 +219,13 @@ def modify_order_status(order_id: int, data: OrderStatusUpdate):
     conn.close()
     return {"message": "Order status updated."}
 
+# --- Frontend Routing ---
 FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
 
 if os.path.exists(FRONTEND_DIR):
-    # Mount static assets (CSS, JS, images)
     app.mount("/css", StaticFiles(directory=os.path.join(FRONTEND_DIR, "css")), name="css")
     app.mount("/js", StaticFiles(directory=os.path.join(FRONTEND_DIR, "js")), name="js")
 
-    # Serve HTML pages directly
     @app.get("/")
     def serve_index():
         return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))

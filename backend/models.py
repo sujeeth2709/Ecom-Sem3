@@ -15,7 +15,7 @@ class ProductCreate(BaseModel):
     category: str
     price: float
     stock: int
-    image: Optional[str] = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80"
+    image: Optional[str] = None
 
 class ProductUpdate(BaseModel):
     price: float
@@ -24,12 +24,14 @@ class ProductUpdate(BaseModel):
 class CartItem(BaseModel):
     productId: int
     qty: int
-    price: float
+
+class CartSync(BaseModel):
+    userId: int
+    items: List[CartItem]
 
 class OrderCreate(BaseModel):
     userId: int
     items: List[CartItem]
-    total: float
 
 class OrderStatusUpdate(BaseModel):
     status: str
