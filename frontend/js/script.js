@@ -33,11 +33,21 @@ function toast(msg) {
     window._toastTimer = setTimeout(() => (t.style.display = "none"), 1800);
 }
 
-// Client Cart Buffer Functions
-function getCart() { return JSON.parse(localStorage.getItem("cart") || "[]"); }
+/* ---------------- Client Cart Buffer Functions ---------------- */
+
+// NEW: Generates a unique cart key for each specific user
+function getCartKey() {
+    const user = currentUser();
+    return user ? `cart_${user.id}` : "cart";
+}
+
+function getCart() { 
+    return JSON.parse(localStorage.getItem(getCartKey()) || "[]"); 
+}
 
 function saveCart(c) { 
-    localStorage.setItem("cart", JSON.stringify(c)); 
+    // Saves to the user-specific cart key
+    localStorage.setItem(getCartKey(), JSON.stringify(c)); 
     updateCartPill(); 
 
     const user = currentUser();
@@ -97,6 +107,8 @@ function initAuthPage() {
             if (res.ok) {
                 const user = await res.json();
                 localStorage.setItem("session", JSON.stringify(user));
+                // Sync cart instantly on login to self-heal database discrepancies
+                saveCart(getCart());
                 window.location.href = user.role === "admin" ? "admin.html" : "shop.html";
             } else {
                 const err = await res.json();
@@ -130,18 +142,16 @@ function initAuthPage() {
     }
 }
 
-/* ---------------- 2. Shop Page API Calls (Updated for Search) ---------------- */
+/* ---------------- 2. Shop Page API Calls ---------------- */
 
 async function initShopPage() {
     const user = requireLogin("customer");
     if (!user) return;
     document.getElementById("who").textContent = user.name;
 
-    // Fetch all products once
     const res = await fetch(`${API_BASE_URL}/products`);
     allProducts = await res.json();
 
-    // Attach search event listener
     const searchBar = document.getElementById("search-bar");
     if (searchBar) {
         searchBar.addEventListener("input", (e) => {
@@ -149,17 +159,14 @@ async function initShopPage() {
         });
     }
 
-    // Initial render
     renderProducts("");
 }
 
-// Function to filter and render products
 function renderProducts(searchQuery) {
     const wrap = document.getElementById("products");
     if (!wrap) return;
     wrap.innerHTML = "";
 
-    // Filter products by name based on the search bar
     const filtered = allProducts.filter(p => 
         p.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -180,7 +187,7 @@ function renderProducts(searchQuery) {
             let line = cart.find((i) => i.productId === p.id);
             if (line) line.qty += 1;
             else cart.push({ productId: p.id, name: p.name, price: p.price, qty: 1 });
-            saveCart(cart); // Syncs to DB automatically
+            saveCart(cart); 
             toast("Added to cart");
         };
         wrap.appendChild(el);
@@ -188,14 +195,13 @@ function renderProducts(searchQuery) {
     updateCartPill();
 }
 
-/* ---------------- 3. Checkout Page API Calls (Updated for Delete) ---------------- */
+/* ---------------- 3. Checkout Page API Calls ---------------- */
 
 window.removeFromCart = function(productId) {
     let cart = getCart();
-    // Filter out the deleted product
     cart = cart.filter(item => item.productId !== productId);
-    saveCart(cart); // This automatically triggers the DB sync to delete it there too!
-    initCheckoutPage(); // Re-render the page
+    saveCart(cart); 
+    initCheckoutPage(); 
     toast("Item removed");
 };
 
@@ -204,7 +210,7 @@ async function initCheckoutPage() {
     if (!user) return;
     document.getElementById("who").textContent = user.name;
     
-    updateCartPill(); // Fixes the "0 in cart" display bug on page load
+    updateCartPill(); 
 
     const cart = getCart();
     const tbody = document.getElementById("cart-body");
@@ -214,7 +220,6 @@ async function initCheckoutPage() {
         tbody.innerHTML = "";
         cart.forEach((item) => {
             total += item.price * item.qty;
-            // Injected the Remove Button in the final <td>
             tbody.innerHTML += `
             <tr>
                 <td>${item.name}</td>
@@ -227,7 +232,6 @@ async function initCheckoutPage() {
         document.getElementById("cart-total").textContent = "₹" + total;
     }
 
-    // Load past user order history via API
     const historyRes = await fetch(`${API_BASE_URL}/orders/user/${user.id}`);
     const orders = await historyRes.json();
     const historyWrap = document.getElementById("order-history");
@@ -238,7 +242,6 @@ async function initCheckoutPage() {
         });
     }
 
-    // Submit order payload to Python for validation and processing
     const orderBtn = document.getElementById("place-order");
     if (orderBtn) {
         orderBtn.onclick = async () => {
@@ -258,7 +261,7 @@ async function initCheckoutPage() {
 
             if (res.ok) {
                 toast("Order Placed Successfully!");
-                saveCart([]); // Clears cart in LocalStorage & Database
+                saveCart([]); 
                 window.location.href = "shop.html";
             } else {
                 const err = await res.json();
@@ -275,7 +278,6 @@ async function initAdminPage() {
     if (!user) return;
     document.getElementById("who").textContent = user.name;
 
-    // Fetch dashboard analytics computed by Python
     const res = await fetch(`${API_BASE_URL}/admin/dashboard`);
     const data = await res.json();
 
@@ -342,7 +344,6 @@ async function initAdminPage() {
     }
 }
 
-// Reads a picked image file and shrinks it (max 400px) so it can be stored with the product
 function imageToDataUrl(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
